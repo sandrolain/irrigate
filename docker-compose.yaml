@@ -1,0 +1,69 @@
+version: '3.3'
+name: "irrigate"
+services:
+
+  mongodb:
+    image: mongo:6.0.3
+    hostname: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "root"
+      MONGO_INITDB_ROOT_PASSWORD: "mypassword"
+    networks:
+      - irrigate
+    restart: on-failure
+
+  redis:
+    image: redis:latest
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    command: redis-server --requirepass "mypassword" --port 6379
+    networks:
+      - irrigate
+    restart: on-failure
+
+  broker:
+    image: irrigate-broker:latest
+    hostname: broker
+    build:
+      context: ./broker
+      dockerfile: Dockerfile
+    ports:
+      - "1883:1883"
+    networks:
+      - irrigate
+    depends_on:
+      - mongodb
+    restart: on-failure
+
+  garden:
+    image: irrigate-garden:latest
+    hostname: garden
+    build:
+      context: ./garden
+      dockerfile: Dockerfile
+    networks:
+      - irrigate
+    depends_on:
+      - broker
+    restart: on-failure
+
+  # bff:
+  #   image: irrigate-bff:latest
+  #   hostname: bff
+  #   build:
+  #     context: ./bff
+  #     dockerfile: Dockerfile
+  #   networks:
+  #     - irrigate
+  #   depends_on:
+  #     - broker
+
+networks:
+  irrigate:
