@@ -28,6 +28,17 @@ services:
       - irrigate
     restart: on-failure
 
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    hostname: redis-commander
+    ports:
+    - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:mypassword
+    networks:
+      - irrigate
+    restart: on-failure
+
   broker:
     image: irrigate-broker:latest
     hostname: broker
@@ -47,6 +58,18 @@ services:
     hostname: garden
     build:
       context: ./garden
+      dockerfile: Dockerfile
+    networks:
+      - irrigate
+    depends_on:
+      - broker
+    restart: on-failure
+
+  monitor:
+    image: irrigate-monitor:latest
+    hostname: monitor
+    build:
+      context: ./monitor
       dockerfile: Dockerfile
     networks:
       - irrigate

@@ -1,46 +1,41 @@
 import * as mqtt from "mqtt";
+import { SprinklerConfig } from "./model";
 
-let client: mqtt.Client;
+let client: mqtt.Client | null;
 
-export function connectMqtt(brokerUri) {
+export function connectMqtt(brokerUri: string, cb: mqtt.OnMessageCallback) {
   client = mqtt.connect(brokerUri);
 
   client.on('connect', function () {
-
+    console.log("Connected to MQTT Broker")
   });
 
-  client.on('message', function (topic, message) {
+  client.on('message', cb);
 
+  client.on('disconnect', function (e) {
+    reconnect(brokerUri, cb);
   });
-
-  client.on('disconnect', function () {
-    reconnect(brokerUri);
-  });
-  client.on('error', function () {
-    reconnect(brokerUri);
+  client.on('error', function (e) {
+    console.error("Cannot connect to MQTT:", e)
+    reconnect(brokerUri, cb);
   });
   client.on('offline', function () {
-    reconnect(brokerUri);
+    reconnect(brokerUri, cb);
   });
 
+  client.subscribe("garden/status");
 }
 
-function reconnect(brokerUri: string) {
+function reconnect(brokerUri: string, cb: mqtt.OnMessageCallback) {
   client?.end();
   client = null;
-  setTimeout(() => connectMqtt(brokerUri), 1000);
+  setTimeout(() => connectMqtt(brokerUri, cb), 1000);
 }
 
-export interface ConfigMessage {
-	pressure?: number;
-	x?: number;
-	y?: number;
-	direction?: number;
-}
-
-export function sendSprinklerConfig(uuid: number, config: ConfigMessage): boolean {
+export function sendSprinklerConfig(config: SprinklerConfig): boolean {
   if (client) {
-    client.publish(`garden/config/${uuid}`, JSON.stringify(config));
+    console.log("Send Sprinkler config:", config)
+    client.publish(`garden/config`, JSON.stringify(config));
     return true;
   }
   return false;

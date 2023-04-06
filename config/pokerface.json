@@ -1,0 +1,12 @@
+{
+  "port": 8888,
+  "https": false,
+  "forwards": [{
+      "path": "/webapp",
+      "rewrite": {
+        "/webapp": "/"
+      },
+      "destination": "http://webapp:8080"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+[submodule "go-pokerface"]
+	path = go-pokerface
+	url = https://github.com/sandrolain/go-pokerface

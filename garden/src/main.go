@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,19 +10,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
-	broker   = "ws://broker:1883"
-	clientId = "garden"
-	qos      = 0
+	REDIS_URI      = "redis:6379"
+	REDIS_PASSWORD = "mypassword"
+	BROKER_URI     = "ws://broker:1883"
+	clientId       = "garden"
+	qos            = 1
 )
 
 const (
 	TOPIC_STATUS = "garden/status"
+	TOPIC_CONFIG = "garden/config"
 )
 
 type Sprinkler struct {
@@ -42,6 +45,7 @@ type Garden struct {
 }
 
 var client mqtt.Client
+var redisClient *redis.Client
 var status Garden = Garden{
 	Raining: false,
 	Status:  make(map[string]*Sprinkler),
@@ -55,7 +59,8 @@ var statusMx sync.RWMutex = sync.RWMutex{}
 // }
 
 func main() {
-	createSplinker(Sprinkler{
+	createSprinkler(Sprinkler{
+		Id:        "a",
 		Open:      true,
 		Pressure:  0.5,
 		X:         0,
@@ -63,7 +68,8 @@ func main() {
 		Direction: 135,
 	})
 
-	createSplinker(Sprinkler{
+	createSprinkler(Sprinkler{
+		Id:        "b",
 		Open:      false,
 		Pressure:  0,
 		X:         1,
@@ -71,7 +77,8 @@ func main() {
 		Direction: 225,
 	})
 
-	createSplinker(Sprinkler{
+	createSprinkler(Sprinkler{
+		Id:        "c",
 		Open:      true,
 		Pressure:  1,
 		X:         1,
@@ -79,7 +86,8 @@ func main() {
 		Direction: 315,
 	})
 
-	createSplinker(Sprinkler{
+	createSprinkler(Sprinkler{
+		Id:        "d",
 		Open:      false,
 		Pressure:  0,
 		X:         0,
@@ -88,12 +96,35 @@ func main() {
 	})
 
 	client = initMqtt()
+	redisClient = initRedis()
 
+	go startWeatherUpdater()
 	go startStatusUpdater()
 	go startStatusPublish()
 
+	err := subscribeConfig(client)
+	if err != nil {
+		panic(err)
+	}
+
 	app := make(chan bool)
 	<-app
+}
+
+func startWeatherUpdater() {
+	ticker := time.NewTicker(3 * time.Second)
+	for {
+		<-ticker.C
+		value, err := redisClient.Get(context.TODO(), "weather").Result()
+		if err != nil {
+			fmt.Printf("cannot check weather: %v\n", err)
+			return
+		}
+		statusMx.Lock()
+		status.Raining = (value == "rainy")
+		statusMx.Unlock()
+		fmt.Printf("weather is now: %v\n", value)
+	}
 }
 
 func startStatusUpdater() {
@@ -118,20 +149,22 @@ func startStatusUpdater() {
 			if p > pressure {
 				sts.Pressure = math.Max(pressure, sts.Pressure-0.1)
 			}
-			fmt.Printf("Sprinkler %v pressure %v\n", id, sts.Pressure)
+			fmt.Printf("Sprinkler %v pressure %v / %v\n", id, sts.Pressure, pressure)
 			d := sts.Direction
 			if d < cfg.Direction {
-				sts.Direction = sts.Direction + 5
+				sts.Direction = sts.Direction + 10
 				if sts.Direction > cfg.Direction {
 					sts.Direction = cfg.Direction
 				}
 			}
 			if d > cfg.Direction {
-				sts.Direction = sts.Direction - 5
+				sts.Direction = sts.Direction - 10
 				if sts.Direction < cfg.Direction {
 					sts.Direction = cfg.Direction
 				}
 			}
+			sts.X = cfg.X
+			sts.Y = cfg.Y
 			sts.Mx.Unlock()
 		}
 		statusMx.Unlock()
@@ -153,22 +186,31 @@ func startStatusPublish() {
 	}
 }
 
-func createSplinker(s Sprinkler) {
-	s.Id = uuid.New().String()
+func createSprinkler(s Sprinkler) {
+	// TODO: restore UUID
+	// s.Id = uuid.New().String()
 	status.Config[s.Id] = &s
 	status.Status[s.Id] = &Sprinkler{
 		Id: s.Id,
 	}
 }
 
+func initRedis() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     REDIS_URI,
+		Password: REDIS_PASSWORD,
+		DB:       0, // use default DB
+	})
+}
+
 func initMqtt() mqtt.Client {
 	mqtt.ERROR = log.New(os.Stdout, "[ERROR] ", 0)
 	mqtt.CRITICAL = log.New(os.Stdout, "[CRIT] ", 0)
 	mqtt.WARN = log.New(os.Stdout, "[WARN]  ", 0)
-	mqtt.DEBUG = log.New(os.Stdout, "[DEBUG] ", 0)
+	//mqtt.DEBUG = log.New(os.Stdout, "[DEBUG] ", 0)
 
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(broker)
+	opts.AddBroker(BROKER_URI)
 	opts.SetClientID(clientId)
 	opts.SetKeepAlive(2 * time.Second)
 	// opts.SetDefaultPublishHandler(f)
@@ -197,43 +239,58 @@ func publishStatus(client mqtt.Client, msg []byte) {
 	}()
 }
 
-func getSprinklerForId(id string) (*Sprinkler, error) {
-	statusMx.RLock()
-	defer statusMx.RUnlock()
-	for _, s := range status.Config {
-		if s.Id == id {
-			return s, nil
+func subscribeConfig(client mqtt.Client) (err error) {
+	token := client.Subscribe(TOPIC_CONFIG, 0, func(c mqtt.Client, m mqtt.Message) {
+		err := parseConfigMessage(m.Payload())
+		if err != nil {
+			fmt.Printf("cannot parse config: %v\n", err)
 		}
-	}
-	return nil, fmt.Errorf("sprinkler not found %v", id)
+	})
+	token.Wait()
+	return token.Error()
 }
 
-func configSprinkler(uuid string, config ConfigMessage) (err error) {
-	sprinkler, err := getSprinklerForId(uuid)
+func getSprinklerForId(id string) (sprinkler *Sprinkler, err error) {
+	statusMx.RLock()
+	defer statusMx.RUnlock()
+	sprinkler, ok := status.Config[id]
+	if !ok {
+		err = fmt.Errorf("sprinkler not found %v", id)
+	}
+	return sprinkler, err
+}
+
+func configSprinkler(config ConfigMessage) (err error) {
+	sprinkler, err := getSprinklerForId(config.Id)
 	if err != nil {
 		return
 	}
 	sprinkler.Mx.Lock()
 	defer sprinkler.Mx.Unlock()
+	sprinkler.Open = config.Open
 	sprinkler.Pressure = config.Pressure
 	sprinkler.Direction = config.Direction
 	sprinkler.X = config.X
 	sprinkler.Y = config.Y
+	fmt.Sprintf("new sprinkler config: %+v", sprinkler)
 	return
 }
 
 type ConfigMessage struct {
+	Id        string  `json:"id"`
+	Open      bool    `json:"open"`
 	Pressure  float64 `json:"pressure,omitempty"`
 	X         float64 `json:"x,omitempty"`
 	Y         float64 `json:"y,omitempty"`
 	Direction int     `json:"direction,omitempty"`
 }
 
-func parseMessage(uuid string, msg []byte) (err error) {
+func parseConfigMessage(msg []byte) (err error) {
 	var cfg ConfigMessage
 	err = json.Unmarshal(msg, &cfg)
 	if err != nil {
 		return
 	}
-	return configSprinkler(uuid, cfg)
+	fmt.Printf("new config for %v: %+v\n", cfg.Id, cfg)
+	return configSprinkler(cfg)
 }
