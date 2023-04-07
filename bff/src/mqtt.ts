@@ -38,5 +38,6 @@ export function sendSprinklerConfig(config: SprinklerConfig): boolean {
     client.publish(`garden/config`, JSON.stringify(config));
     return true;
   }
+  console.log("Cannot send Sprinkler config:", config)
   return false;
 }

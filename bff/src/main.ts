@@ -43,6 +43,7 @@ app.post('/weather/:weather', (req: Request, res: Response) => {
     return errorResponse(res, 500, "The wather status could not be sent");
   }
   res.status(201);
+  res.send();
 });
 
 app.post('/sprinkler/config', (req: Request, res: Response) => {
@@ -54,6 +55,7 @@ app.post('/sprinkler/config', (req: Request, res: Response) => {
     return errorResponse(res, 500, "The new configuration could not be sent");
   }
   res.status(201);
+  res.send();
 });
 
 const wsClients: Set<ws> = new Set();

@@ -28,13 +28,13 @@ const (
 )
 
 type Sprinkler struct {
-	Id        string  `json:"id"`
-	Open      bool    `json:"open"`
-	Pressure  float64 `json:"pressure"`
-	X         float64 `json:"x"`
-	Y         float64 `json:"y"`
-	Direction int     `json:"direction"`
-	Mx        sync.RWMutex
+	Id        string       `json:"id"`
+	Open      bool         `json:"open"`
+	Pressure  float64      `json:"pressure"`
+	X         float64      `json:"x"`
+	Y         float64      `json:"y"`
+	Direction int          `json:"direction"`
+	Mx        sync.RWMutex `json:"-"`
 }
 
 type Garden struct {
@@ -112,9 +112,14 @@ func main() {
 }
 
 func startWeatherUpdater() {
-	ticker := time.NewTicker(3 * time.Second)
+	redisClient.ConfigSet(context.TODO(), "notify-keyspace-events", "KEA")
+	subscriber := redisClient.Subscribe(context.TODO(), "__keyspace@0__:weather")
+
 	for {
-		<-ticker.C
+		_, err := subscriber.ReceiveMessage(context.TODO())
+		if err != nil {
+			panic(err)
+		}
 		value, err := redisClient.Get(context.TODO(), "weather").Result()
 		if err != nil {
 			fmt.Printf("cannot check weather: %v\n", err)
@@ -125,6 +130,20 @@ func startWeatherUpdater() {
 		statusMx.Unlock()
 		fmt.Printf("weather is now: %v\n", value)
 	}
+
+	// ticker := time.NewTicker(3 * time.Second)
+	// for {
+	// 	<-ticker.C
+	// 	value, err := redisClient.Get(context.TODO(), "weather").Result()
+	// 	if err != nil {
+	// 		fmt.Printf("cannot check weather: %v\n", err)
+	// 		return
+	// 	}
+	// 	statusMx.Lock()
+	// 	status.Raining = (value == "rainy")
+	// 	statusMx.Unlock()
+	// 	fmt.Printf("weather is now: %v\n", value)
+	// }
 }
 
 func startStatusUpdater() {
@@ -172,7 +191,7 @@ func startStatusUpdater() {
 }
 
 func startStatusPublish() {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	for {
 		<-ticker.C
 		statusMx.RLock()
@@ -263,6 +282,15 @@ func getSprinklerForId(id string) (sprinkler *Sprinkler, err error) {
 func configSprinkler(config ConfigMessage) (err error) {
 	sprinkler, err := getSprinklerForId(config.Id)
 	if err != nil {
+		createSprinkler(Sprinkler{
+			Id:        config.Id,
+			Open:      config.Open,
+			Pressure:  config.Pressure,
+			Direction: config.Direction,
+			X:         config.X,
+			Y:         config.Y,
+		})
+		fmt.Sprintf("create sprinkler config: %+v", sprinkler)
 		return
 	}
 	sprinkler.Mx.Lock()
