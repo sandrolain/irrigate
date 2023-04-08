@@ -7,14 +7,14 @@
       "rewrite": {
         "/webapp/*": "/$1"
       },
-      "destination": "http://127.0.0.1:9080"
+      "destination": "http://webapp:9080"
     },
     {
       "path": "/api/*",
       "rewrite": {
         "/api/*": "/$1"
       },
-      "destination": "http://127.0.0.1:8080"
+      "destination": "http://bff:8080"
     }
   ]
 }
