@@ -4,7 +4,7 @@
   "description": "BFF irrigate",
   "main": "index.js",
   "scripts": {
-    "serve": "npx ts-node ./scr/main.ts"
+    "serve": "npx ts-node ./src/main.ts"
   },
   "repository": {
     "type": "git",

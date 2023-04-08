@@ -3,7 +3,7 @@ import { Garden } from "./model";
 import { configSprinkler } from "./SprinklerLi";
 
 
-const sprinklerRadius = 20;
+const sprinklerRadius = 32;
 
 export function GardenMap(props: {width: number, height: number, garden: Garden | null}) {
   const {width, height, garden} = props;
@@ -49,7 +49,7 @@ export function GardenMap(props: {width: number, height: number, garden: Garden 
 
   useEffect(() => {
     const grassImage = new Image();
-    grassImage.src = "grass.webp";
+    grassImage.src = "grass.png";
     setGrassImage(grassImage);
   }, []);
 
@@ -72,8 +72,8 @@ export function GardenMap(props: {width: number, height: number, garden: Garden 
 
   return (<canvas {...props} ref={canvasRef} onClick={(e) => {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width; //x position within the element.
-    const y = (e.clientY - rect.top) / rect.height;  //y position within the element.
+    const x = (e.clientX - rect.left - sprinklerRadius) / (rect.width - sprinklerRadius * 2); //x position within the element.
+    const y = (e.clientY - rect.top - sprinklerRadius) / (rect.height - sprinklerRadius * 2);  //y position within the element.
     configSprinkler({
       x, y,
       id: Math.random().toString(),

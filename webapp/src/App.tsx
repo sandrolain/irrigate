@@ -21,6 +21,9 @@ class App extends React.Component {
     const configs = this.state.garden?.config ?? {};
     return (
       <div className="App">
+        <div className='Logo'>
+          <img src="irrigate.svg" />
+        </div>
         <div className="Sprinklers">
           {states.map(([key, state]) => (<SprinklerLi key={key} state={state} config={configs[key]} />))}
         </div>
@@ -61,7 +64,7 @@ class App extends React.Component {
 
   async #toggleWeather() {
     const raining = this.state.garden?.raining;
-    const response = await fetch(`http://${BFF_ADDRESS}/weather/${raining ? "sunny" : "rainy"}`, {
+    const response = await fetch(`/api/weather/${raining ? "sunny" : "rainy"}`, {
       method: "POST"
     });
     if (response.status > 399) {

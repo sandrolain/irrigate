@@ -1,4 +1,4 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import { connectMqtt, sendSprinklerConfig } from './mqtt';
 import expressWs from "express-ws";
 import ws from "ws";
@@ -9,9 +9,9 @@ import cors from "cors";
 const BROKER_URI      = process.env.BROKER_URI as string ?? "ws://127.0.0.1:1883";
 const PORT            = process.env.PORT as string ?? "8080";
 const REDIS_URI       = process.env.REDIS_URI as string ?? "redis://127.0.0.1:6379";
-const REDIS_PASSWORD  = process.env.REDIS_URI as string ?? "mypassword";
+const REDIS_PASSWORD  = process.env.REDIS_PASSWORD as string ?? "mypassword";
 
-const { app, getWss, applyTo } = expressWs(express());
+const { app } = expressWs(express());
 app.use(express.json());
 app.use(cors());
 

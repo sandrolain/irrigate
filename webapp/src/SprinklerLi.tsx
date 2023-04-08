@@ -1,4 +1,3 @@
-import { BFF_ADDRESS } from "./config";
 import { Sprinkler } from "./model";
 import { useForceUpdate } from "./utils";
 
@@ -42,7 +41,7 @@ export function SprinklerLi(props: {state: Sprinkler, config: Sprinkler}) {
 }
 
 export async function configSprinkler(config: Sprinkler) {
-  const response = await fetch(`http://${BFF_ADDRESS}/sprinkler/config`, {
+  const response = await fetch(`/api/sprinkler/config`, {
     method: "POST",
     headers: new Headers({"Content-Type": "application/json"}),
     body: JSON.stringify(config)

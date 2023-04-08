@@ -77,16 +77,48 @@ services:
       - broker
     restart: on-failure
 
-  # bff:
-  #   image: irrigate-bff:latest
-  #   hostname: bff
-  #   build:
-  #     context: ./bff
-  #     dockerfile: Dockerfile
-  #   networks:
-  #     - irrigate
-  #   depends_on:
-  #     - broker
+  webapp:
+    image: irrigate-webapp:latest
+    hostname: webapp
+    ports:
+    - "9080:9080"
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    networks:
+      - irrigate
+    restart: on-failure
+
+  bff:
+    image: irrigate-bff:latest
+    hostname: bff
+    ports:
+    - "8080:8080"
+    build:
+      context: ./bff
+      dockerfile: Dockerfile
+    environment:
+      - BROKER_URI=ws://broker:1883
+      - PORT=8080
+      - REDIS_URI=redis://redis:6379
+      - REDIS_PASSWORD=mypassword
+    networks:
+      - irrigate
+    depends_on:
+      - broker
+
+  pokerface:
+    image: irrigate-pokerface:latest
+    hostname: pokerface
+    ports:
+    - "80:80"
+    volumes:
+      - ./config/pokerface.json:/config.json
+    build:
+      context: ./go-pokerface
+      dockerfile: Dockerfile
+    networks:
+      - irrigate
 
 networks:
   irrigate:

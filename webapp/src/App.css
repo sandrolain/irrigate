@@ -1,10 +1,16 @@
 .App {
   display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.Logo {
+  width: 64px;
 }
 
 .Sprinklers {
   padding: 16px;
-  background: #333333;
+  background: #222222;
   width: 200px;
   display: flex;
   flex-direction: column;
@@ -41,10 +47,30 @@
 .Sprinkler-Direction span {
   flex: 1;
 }
+.Sprinkler button {
+  background: #444444;
+  border-radius: 2px;
+  border: none;
+  font-size: inherit;
+  margin: 1px;
+  width: 1.3em;
+  height: 1.3em;
+  line-height: 1.3em;
+  padding: 0;
+  cursor: pointer;
+}
+.Sprinkler button:hover {
+  background-color: #555555;
+}
+
+.Map {
+  border: 8px solid #222222;
+}
 
 
 canvas {
   background: #000000;
+  vertical-align: top;
 }
 
 .Weather-ico {
