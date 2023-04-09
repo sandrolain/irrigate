@@ -1,0 +1,12 @@
+client -> pokerface: HTTP request
+pokerface -> webapp: HTTP proxy
+pokerface -> bff: HTTP proxy
+
+webapp -> pokerface: HTTP API
+webapp <-> bff: WebSocket
+bff -> broker: MQTT \[garden/config\]
+broker -> garden: MQTT \[garden/config\]
+garden -> broker: MQTT \[garden/status\]
+broker -> monitor : MQTT \[garden/status\]
+broker -> bff : MQTT \[garden/status\]
+
