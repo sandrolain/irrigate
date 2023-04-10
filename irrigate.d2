@@ -1,12 +1,21 @@
-client -> pokerface: HTTP request
+Browser -> pokerface: HTTP request
 pokerface -> webapp: HTTP proxy
 pokerface -> bff: HTTP proxy
 
-webapp -> pokerface: HTTP API
-webapp <-> bff: WebSocket
+Browser <-> bff: WebSocket
 bff -> broker: MQTT \[garden/config\]
 broker -> garden: MQTT \[garden/config\]
 garden -> broker: MQTT \[garden/status\]
 broker -> monitor : MQTT \[garden/status\]
 broker -> bff : MQTT \[garden/status\]
 
+bff -> Redis : \[weather\]
+garden <-> Redis : \[weather\]
+
+monitor -> MongoDB : \[monitor.status\]
+broker -> MongoDB : \[aedes.*\]
+
+broker: Broker MQTT
+broker.shape: queue
+MongoDB.shape: cylinder
+Redis.shape: cylinder
