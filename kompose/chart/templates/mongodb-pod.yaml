@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kompose.cmd: kompose convert --out ./kompose/chart --chart
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.network/irrigate-irrigate: "true"
+    io.kompose.service: mongodb
+  name: mongodb
+spec:
+  containers:
+    - env:
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: mypassword
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: root
+      image: mongo:6.0.3
+      name: mongodb
+      ports:
+        - containerPort: 27017
+      resources: {}
+      volumeMounts:
+        - mountPath: /data/db
+          name: mongodb-claim0
+  hostname: mongodb
+  restartPolicy: OnFailure
+  volumes:
+    - name: mongodb-claim0
+      persistentVolumeClaim:
+        claimName: mongodb-claim0
+status: {}

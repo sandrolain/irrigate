@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert --out ./kompose/chart --chart
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: bff
+  name: bff
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: bff
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert --out ./kompose/chart --chart
+        kompose.version: 1.28.0 (HEAD)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/irrigate-irrigate: "true"
+        io.kompose.service: bff
+    spec:
+      containers:
+        - env:
+            - name: BROKER_URI
+              value: ws://broker:1883
+            - name: PORT
+              value: "8080"
+            - name: REDIS_PASSWORD
+              value: mypassword
+            - name: REDIS_URI
+              value: redis://redis:6379
+          image: irrigate-bff:latest
+          name: bff
+          ports:
+            - containerPort: 8080
+          resources: {}
+      hostname: bff
+      restartPolicy: Always
+status: {}

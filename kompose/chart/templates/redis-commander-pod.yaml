@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kompose.cmd: kompose convert --out ./kompose/chart --chart
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.network/irrigate-irrigate: "true"
+    io.kompose.service: redis-commander
+  name: redis-commander
+spec:
+  containers:
+    - env:
+        - name: REDIS_HOSTS
+          value: local:redis:6379:0:mypassword
+      image: ghcr.io/joeferner/redis-commander:latest
+      name: redis-commander
+      ports:
+        - containerPort: 8081
+      resources: {}
+  hostname: redis-commander
+  restartPolicy: OnFailure
+status: {}

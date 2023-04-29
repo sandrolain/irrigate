@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert --out ./kompose
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: pokerface
+  name: pokerface
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: pokerface
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert --out ./kompose
+        kompose.version: 1.28.0 (HEAD)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/irrigate-irrigate: "true"
+        io.kompose.service: pokerface
+    spec:
+      containers:
+        - image: irrigate-pokerface:latest
+          name: pokerface
+          ports:
+            - containerPort: 80
+          resources: {}
+          volumeMounts:
+            - mountPath: /config.json
+              name: pokerface-claim0
+      hostname: pokerface
+      restartPolicy: Always
+      volumes:
+        - name: pokerface-claim0
+          persistentVolumeClaim:
+            claimName: pokerface-claim0
+status: {}
